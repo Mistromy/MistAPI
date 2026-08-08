@@ -3,21 +3,23 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net/http"
 	"sync"
 	"time"
 
+	"charm.land/log/v2"
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 )
 
-type ServerMsg struct {
-	Server string `json:"server"`
-	Status string `json:"status"`
-	Cpu    int    `json:"cpu"`
-	Uptime uint64 `json:"stats"`
-}
+//type ServerMsg struct {
+//	Server string `json:"server"`
+//	Status string `json:"status"`
+//	Cpu    int    `json:"cpu"`
+//	Uptime uint64 `json:"stats"`
+//}
 
 type NirupamaMsg struct {
 	Messages    int      `json:"messages_tracked"`
@@ -147,6 +149,12 @@ func fmtUptime(u *float32) string {
 }
 
 func main() {
+	debug := flag.Bool("debug", false, "enable debug logging")
+	flag.Parse()
+	if *debug {
+		log.SetLevel(log.DebugLevel)
+	}
+
 	hub := newHub()
 	publicMux := http.NewServeMux()
 	privateMux := http.NewServeMux()
@@ -172,10 +180,8 @@ func main() {
 			return
 		}
 		defer func(conn *websocket.Conn) {
-			err := conn.CloseNow()
-			if err != nil {
+			_ = conn.CloseNow()
 
-			}
 		}(conn)
 
 		hub.add(conn)
@@ -223,20 +229,23 @@ func main() {
 			}
 			snapshot := latest
 			mu.Unlock()
-			fmt.Printf("\r\033[Kupdated: msgs=%d guilds=%d members=%d uptime=%s",
-				snapshot.Messages, snapshot.Servers, snapshot.Members, fmtUptime(snapshot.Uptime))
+			log.Debug("Updated",
+				"msgs", snapshot.Messages,
+				"guilds", snapshot.Servers,
+				"members", snapshot.Members,
+				"uptime", fmtUptime(snapshot.Uptime))
 
 			hub.broadcast(snapshot) // send the full snapshot to every connected client
 		}
 	})
 	go func() {
-		fmt.Println("Public API on", publicPort)
+		log.Info("Public API on", "port", publicPort)
 		if err := http.ListenAndServe(publicPort, publicMux); err != nil {
-			fmt.Println("Error starting public API:", err)
+			log.Error("Error starting public API:", err)
 		}
 	}()
-	fmt.Println("Private API on", privatePort, " via tailscale. /nirupama/live")
+	log.Info("Private API via tailscale on", "port", privatePort)
 	if err := http.ListenAndServe(privatePort, privateMux); err != nil {
-		fmt.Println("Error starting private API:", err)
+		log.Error("Error starting private API:", err)
 	}
 }
