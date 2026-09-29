@@ -45,8 +45,8 @@ func Init() {
 	log.Info("Loading Artstation Module", "Scrape Interval", scrapeInterval)
 
 	list := scrape()
-	log.Debug(list.Items[1].getImages())
-	log.Debug("Titles found", "titles", returnTitles(list))
+	log.Debug(list.Items[1].images())
+	log.Debug("Titles found", "titles", list.titles())
 	ticker := time.NewTicker(scrapeInterval)
 	defer ticker.Stop()
 	for range ticker.C {
@@ -100,7 +100,7 @@ func scrape() projectList {
 	return list
 }
 
-func returnTitles(list projectList) string {
+func (list projectList) titles() string {
 	var b strings.Builder
 	for _, v := range list.Items {
 		b.WriteString(strings.TrimSuffix(v.Title, " by Mist") + "\n")
@@ -110,7 +110,7 @@ func returnTitles(list projectList) string {
 
 var imgSrc = regexp.MustCompile(`<img src="([^"]+)`)
 
-func (item item) getImages() (images []string) {
+func (item item) images() (images []string) {
 	for _, m := range imgSrc.FindAllStringSubmatch(item.Content, -1) {
 		images = append(images, m[1])
 	}
