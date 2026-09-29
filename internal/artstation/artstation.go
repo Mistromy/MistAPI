@@ -45,8 +45,10 @@ func Init() {
 	log.Info("Loading Artstation Module", "Scrape Interval", scrapeInterval)
 
 	list := scrape()
+	log.Debug("Number of artworks", "count", list.count())
 	log.Debug(list.Items[1].images())
 	log.Debug("Titles found", "titles", list.titles())
+
 	ticker := time.NewTicker(scrapeInterval)
 	defer ticker.Stop()
 	for range ticker.C {
@@ -100,6 +102,7 @@ func scrape() projectList {
 	return list
 }
 
+// titles method gives a string of all titles from the rss feed (testing)
 func (list projectList) titles() string {
 	var b strings.Builder
 	for _, v := range list.Items {
@@ -108,11 +111,17 @@ func (list projectList) titles() string {
 	return b.String()
 }
 
+// imgSrc is the regex pattern to extract image links from the rss feed's "<content:encoded>" entry
 var imgSrc = regexp.MustCompile(`<img src="([^"]+)`)
 
+// images method returns []string of all image URLs in the specific item using regex
 func (item item) images() (images []string) {
 	for _, m := range imgSrc.FindAllStringSubmatch(item.Content, -1) {
 		images = append(images, m[1])
 	}
 	return images
+}
+
+func (list projectList) count() int {
+	return len(list.Items)
 }
