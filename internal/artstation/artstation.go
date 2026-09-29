@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ type item struct {
 	Description string  `xml:"description"`
 	Link        string  `xml:"link"`
 	PublishDate rssTime `xml:"pubDate"`
+	Content     string  `xml:"http://purl.org/rss/1.0/modules/content/ encoded"`
 }
 
 type rssTime struct {
@@ -41,8 +43,10 @@ var client = http.Client{Timeout: time.Second * 5}
 
 func Init() {
 	log.Info("Loading Artstation Module", "Scrape Interval", scrapeInterval)
+
 	list := scrape()
-	log.Info("Titles found", "titles", returnTitles(list))
+	log.Debug(list.Items[1].getImages())
+	log.Debug("Titles found", "titles", returnTitles(list))
 	ticker := time.NewTicker(scrapeInterval)
 	defer ticker.Stop()
 	for range ticker.C {
@@ -50,6 +54,14 @@ func Init() {
 	}
 }
 
+// scrape Returns a projectList struct populated by the rss content from my Artstation
+//
+//	type item struct {
+//	Title       string  `xml:"title"`
+//	Description string  `xml:"description"`
+//	Link        string  `xml:"link"`
+//	PublishDate rssTime `xml:"pubDate"`
+//	}
 func scrape() projectList {
 	request, err := http.NewRequest(http.MethodGet, rssURL, nil)
 	if err != nil {
@@ -60,10 +72,16 @@ func scrape() projectList {
 	request.Header.Add("User-Agent", "MistAPI/1.0 (+https://mista.tech)")
 	response, err := client.Do(request)
 	if err != nil {
-		log.Error("Execute Requst", "error", err)
+		log.Error("Execute Request", "error", err)
 		return projectList{}
 	}
-	defer response.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.Error("Body Close", "error", err)
+			return
+		}
+	}(response.Body)
 	if response.StatusCode != http.StatusOK {
 		log.Warn("Fetch RSS", "StatusCode", response.StatusCode)
 		return projectList{}
@@ -88,4 +106,13 @@ func returnTitles(list projectList) string {
 		b.WriteString(strings.TrimSuffix(v.Title, " by Mist") + "\n")
 	}
 	return b.String()
+}
+
+var imgSrc = regexp.MustCompile(`<img src="([^"]+)`)
+
+func (item item) getImages() (images []string) {
+	for _, m := range imgSrc.FindAllStringSubmatch(item.Content, -1) {
+		images = append(images, m[1])
+	}
+	return images
 }
