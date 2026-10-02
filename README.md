@@ -1,6 +1,9 @@
 # MistAPI
 Unified API for all my stuff
 
+# Notes:
+libvips for image processing
+
 # Artstation
 ### Links:
 **User's List of Projects:**  
