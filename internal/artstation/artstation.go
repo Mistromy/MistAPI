@@ -4,11 +4,14 @@ import (
 	"encoding/xml"
 	"io"
 	"net/http"
+	"path"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
 	"charm.land/log/v2"
+	"github.com/mistromy/MistAPI/internal/projects"
 )
 
 type item struct {
@@ -45,9 +48,25 @@ func Init() {
 	log.Info("Loading Artstation Module", "Scrape Interval", scrapeInterval)
 
 	list := scrape()
+	for _, work := range slices.Backward(list.Items) {
+		dbWork := projects.Work{
+			Source:      projects.SourceTypeArtstation,
+			SourceID:    path.Base(work.Link),
+			Title:       work.Title,
+			Description: work.Description,
+			SourceURL:   work.Link,
+			PublishedAt: work.PublishDate.Time,
+			Images:      nil,
+		}
+		err := projects.AddArtwork(dbWork)
+		if err != nil {
+			log.Warn("Add Artwork to DB", "error", err)
+		}
+	}
+
 	log.Debug("Number of artworks", "count", list.count())
 	log.Debug(list.Items[1].images())
-	log.Debug("Titles found", "titles", list.titles())
+	//log.Debug("Titles found", "titles", list.titles())
 
 	ticker := time.NewTicker(scrapeInterval)
 	defer ticker.Stop()

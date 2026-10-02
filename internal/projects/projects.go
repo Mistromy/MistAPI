@@ -3,6 +3,7 @@ package projects
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	"charm.land/log/v2"
 	_ "modernc.org/sqlite"
@@ -12,6 +13,7 @@ var db *sql.DB
 
 // Init sets up the database for the site
 func Init() error {
+	log.Info("Loading DataBase Module")
 	var err error
 	db, err = sql.Open("sqlite", "site.db")
 	if err != nil {
@@ -55,11 +57,44 @@ CREATE TABLE IF NOT EXISTS images
 	return nil
 }
 
-func Test() {
-	err := db.Ping()
+func AddArtwork(work Work) error {
+	row := db.QueryRow(`INSERT INTO works (source, source_id, title, description,
+                   source_url, published_at, first_seen_at, last_seen_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT (source, source_id) DO UPDATE SET 
+    title = excluded.title,
+    description = excluded.description,
+    source_url   = excluded.source_url,
+    published_at = excluded.published_at,
+    last_seen_at = excluded.last_seen_at
+RETURNING id, title;`, work.Source, work.SourceID, work.Title, work.Description, work.SourceURL, work.PublishedAt, time.Now(), time.Now())
+	var id int
+	var title string
+	err := row.Scan(&id, &title)
 	if err != nil {
-		log.Debug("Database Ping", "error", err)
-		return
+		return err
 	}
-	log.Debug("ok")
+	log.Debug(fmt.Sprintf("%d %s", id, title))
+	return nil
 }
+
+type Work struct {
+	Source      string // "artstation" or "manual"
+	SourceID    string
+	Title       string
+	Description string
+	SourceURL   string
+	PublishedAt time.Time
+	Images      []Image
+}
+
+type Image struct {
+	SourceID string
+	URL      string
+	Caption  string
+}
+
+const (
+	SourceTypeArtstation string = "Artstation"
+	SourceTypeManual     string = "manual"
+)

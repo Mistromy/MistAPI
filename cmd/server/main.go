@@ -2,6 +2,7 @@ package main
 
 import (
 	"charm.land/log/v2"
+	"github.com/mistromy/MistAPI/internal/artstation"
 	"github.com/mistromy/MistAPI/internal/projects"
 )
 
@@ -13,6 +14,5 @@ func main() {
 	if err != nil {
 		log.Fatal("Init Database", "error", err)
 	}
-	projects.Test()
-	//artstation.Init()
+	artstation.Init()
 }
