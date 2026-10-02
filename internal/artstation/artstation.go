@@ -48,20 +48,20 @@ func Init() {
 	log.Info("Loading Artstation Module", "Scrape Interval", scrapeInterval)
 
 	list := scrape()
+	var dbWork []projects.Work
 	for _, work := range slices.Backward(list.Items) {
-		dbWork := projects.Work{
-			Source:      projects.SourceTypeArtstation,
+		dbWork = append(dbWork, projects.Work{Source: projects.SourceTypeArtstation,
 			SourceID:    path.Base(work.Link),
 			Title:       work.Title,
 			Description: work.Description,
 			SourceURL:   work.Link,
 			PublishedAt: work.PublishDate.Time,
 			Images:      nil,
-		}
-		err := projects.AddArtwork(dbWork)
-		if err != nil {
-			log.Warn("Add Artwork to DB", "error", err)
-		}
+		})
+	}
+	err := projects.AddArtwork(dbWork)
+	if err != nil {
+		log.Warn("Add Artwork to DB", "error", err)
 	}
 
 	log.Debug("Number of artworks", "count", list.count())

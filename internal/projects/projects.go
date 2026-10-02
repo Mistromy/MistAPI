@@ -57,8 +57,7 @@ CREATE TABLE IF NOT EXISTS images
 	return nil
 }
 
-func AddArtwork(work Work) error {
-	row := db.QueryRow(`INSERT INTO works (source, source_id, title, description,
+const upsertWork string = `INSERT INTO works (source, source_id, title, description,
                    source_url, published_at, first_seen_at, last_seen_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (source, source_id) DO UPDATE SET 
@@ -67,14 +66,26 @@ ON CONFLICT (source, source_id) DO UPDATE SET
     source_url   = excluded.source_url,
     published_at = excluded.published_at,
     last_seen_at = excluded.last_seen_at
-RETURNING id;`, work.Source, work.SourceID, work.Title, work.Description, work.SourceURL, work.PublishedAt, time.Now(), time.Now())
-	var id int
-	err := row.Scan(&id)
+RETURNING id, first_seen_at = last_seen_at;`
+
+func AddArtwork(works []Work) error {
+	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
-	log.Debug(fmt.Sprintf("%d %s", id))
-	return nil
+	defer func(tx *sql.Tx) {
+		err := tx.Rollback()
+		if err != nil {
+			return
+		}
+	}(tx)
+
+	for _, w := range works {
+		if _, err := tx.Exec(upsertWork, w.Source, w.SourceID, w.Title, w.Description, w.SourceURL, w.PublishedAt, time.Now().UTC().Format(time.RFC3339), time.Now().UTC().Format(time.RFC3339)); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 type Work struct {
