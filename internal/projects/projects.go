@@ -67,14 +67,13 @@ ON CONFLICT (source, source_id) DO UPDATE SET
     source_url   = excluded.source_url,
     published_at = excluded.published_at,
     last_seen_at = excluded.last_seen_at
-RETURNING id, title;`, work.Source, work.SourceID, work.Title, work.Description, work.SourceURL, work.PublishedAt, time.Now(), time.Now())
+RETURNING id;`, work.Source, work.SourceID, work.Title, work.Description, work.SourceURL, work.PublishedAt, time.Now(), time.Now())
 	var id int
-	var title string
-	err := row.Scan(&id, &title)
+	err := row.Scan(&id)
 	if err != nil {
 		return err
 	}
-	log.Debug(fmt.Sprintf("%d %s", id, title))
+	log.Debug(fmt.Sprintf("%d %s", id))
 	return nil
 }
 
