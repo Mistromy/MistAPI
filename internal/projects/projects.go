@@ -2,6 +2,7 @@ package projects
 
 import (
 	"database/sql"
+	"fmt"
 
 	"charm.land/log/v2"
 	_ "modernc.org/sqlite"
@@ -14,13 +15,11 @@ func Init() error {
 	var err error
 	db, err = sql.Open("sqlite", "site.db")
 	if err != nil {
-		log.Error("Database Open", "error", err)
-		return err
+		return fmt.Errorf("database open: %w", err)
 	}
 	err = db.Ping()
 	if err != nil {
-		log.Error("DB check", "error", err)
-		return err
+		return fmt.Errorf("DB check: %w", err)
 	}
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS works
 (
@@ -51,8 +50,7 @@ CREATE TABLE IF NOT EXISTS images
     UNIQUE (work_id, source_id)
 ) STRICT;`)
 	if err != nil {
-		log.Error("Create Tables", "error", err)
-		return err
+		return fmt.Errorf("create tables: %w", err)
 	}
 	return nil
 }
