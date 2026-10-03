@@ -26,7 +26,7 @@ func Init() error {
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS works
 (
     id            INTEGER PRIMARY KEY,
-    source        TEXT    NOT NULL, -- artstation if scraped or manual if uploaded by hand
+    source        TEXT    NOT NULL, -- artStation if scraped or manual if uploaded by hand
     title         TEXT    NOT NULL,
     source_id     TEXT    NOT NULL,
     description   TEXT    NOT NULL DEFAULT '',
@@ -81,7 +81,7 @@ func AddArtwork(works []Work) error {
 	}(tx)
 
 	for _, w := range works {
-		if _, err := tx.Exec(upsertWork, w.Source, w.SourceID, w.Title, w.Description, w.SourceURL, w.PublishedAt, time.Now().UTC().Format(time.RFC3339), time.Now().UTC().Format(time.RFC3339)); err != nil {
+		if _, err := tx.Exec(upsertWork, w.Source, w.SourceID, w.Title, w.Description, w.SourceURL, w.PublishedAt.UTC().Format(time.RFC3339), time.Now().UTC().Format(time.RFC3339), time.Now().UTC().Format(time.RFC3339)); err != nil {
 			return err
 		}
 	}
@@ -106,5 +106,5 @@ type Image struct {
 
 const (
 	SourceTypeArtstation string = "Artstation"
-	SourceTypeManual     string = "manual"
+	//SourceTypeManual     string = "manual"
 )
